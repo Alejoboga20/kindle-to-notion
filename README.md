@@ -23,9 +23,9 @@ manual copy/paste
 Notion
 ```
 
-1. Export your Kindle highlights/notes as a PDF.
-2. Drop the PDF into `input/`.
-3. Run the local script to parse it and generate a Markdown file in `output/`.
+1. Export your Kindle highlights/notes as a PDF (Kindle's "Notebook" export).
+2. Drop one or more PDFs into `input/`.
+3. Run the local script — each PDF is parsed independently and turned into a Markdown file in `output/`, highlights grouped by chapter.
 4. Copy/paste the Markdown into Notion.
 
 This is intentionally low-tech for now. Future iterations may parse Kindle's `My Clippings.txt` directly, write to Notion via its API, or both.
@@ -43,7 +43,7 @@ npm install
 
 ## Usage
 
-Place your exported Kindle PDF in `input/`, then run the CLI in dev mode (auto-reloads on changes to `src/`):
+Place one or more exported Kindle PDFs in `input/`, then run the CLI in dev mode (auto-reloads on changes to `src/`):
 
 ```bash
 npm run dev
@@ -56,7 +56,16 @@ npm run build
 npm start
 ```
 
-Output Markdown is written to `output/`.
+Every `.pdf` in `input/` is processed; a malformed file is skipped with an error logged, so it doesn't stop the rest of the batch. Each book's Markdown is written to `output/<slugified-title>.md`, e.g.:
+
+```markdown
+# The Obstacle is the Way
+
+*by Holiday, Ryan*
+
+## Introduction
+- (Page 4) Turn it around. Find some benefit. Use it as fuel.
+```
 
 ## Scripts
 
@@ -69,20 +78,21 @@ Output Markdown is written to `output/`.
 | `npm run lint:fix`      | Lint and auto-fix                                          |
 | `npm run format`        | Format `src/` with Prettier                                 |
 | `npm run format:check`  | Check formatting without writing changes                    |
+| `npm test`               | Run the Vitest test suite                                    |
 
 ## Project structure
 
 ```
 kindle-to-notion/
 ├── src/
-│   ├── cli.ts                        # entry point
+│   ├── cli.ts                        # entry point — batches input/*.pdf to output/*.md
 │   ├── pdf/
-│   │   └── pdf-parser.ts             # parses Kindle PDF export
+│   │   └── pdf-parser.ts             # extracts raw text lines from a Kindle PDF export
 │   ├── kindle/
-│   │   ├── kindle-parser.ts          # parses raw input into highlights
-│   │   └── kindle.schema.ts          # shared KindleHighlight type
+│   │   ├── kindle-parser.ts          # parses lines into highlights: chapters, page-break merges, notes dropped
+│   │   └── kindle.schema.ts          # KindleHighlight / KindleNotebook Zod schemas
 │   └── markdown/
-│       └── markdown-generator.ts     # renders highlights to Markdown
+│       └── markdown-generator.ts     # renders highlights to Markdown, grouped by chapter
 ├── input/                            # drop Kindle exports here (gitignored)
 ├── output/                           # generated Markdown lands here (gitignored)
 └── package.json
@@ -90,4 +100,4 @@ kindle-to-notion/
 
 ## Status
 
-Early stage — pipeline scaffolding is in place, but parsing/generation logic is not yet implemented.
+PDF → Markdown pipeline is implemented and working end-to-end. Not yet built: `My Clippings.txt` input, direct Notion API integration.
