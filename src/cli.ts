@@ -1,11 +1,19 @@
 import { readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import 'dotenv/config';
+import type { Client } from '@notionhq/client';
 import { extractPdfLines } from './pdf/pdf-parser.js';
 import { parseKindleNotebook } from './kindle/kindle-parser.js';
 import { generateMarkdown } from './markdown/markdown-generator.js';
+import { createNotionClient } from './notion/notion-client.js';
+import { buildNotionBlocks } from './notion/markdown-to-blocks.js';
+import { uploadHighlightsToNotion } from './notion/notion-uploader.js';
 
 const INPUT_DIR = 'input';
 const OUTPUT_DIR = 'output';
+
+const NOTION_API_KEY = process.env['NOTION_API_KEY'];
+const NOTION_PARENT_DATABASE_ID = process.env['NOTION_PARENT_DATABASE_ID'];
 
 function slugify(title: string): string {
   return title
@@ -14,7 +22,11 @@ function slugify(title: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-async function processFile(fileName: string): Promise<void> {
+async function processFile(
+  fileName: string,
+  notionClient: Client,
+  notionDatabaseId: string,
+): Promise<void> {
   const filePath = path.join(INPUT_DIR, fileName);
   const lines = await extractPdfLines(filePath);
   const notebook = parseKindleNotebook(lines);
@@ -27,10 +39,27 @@ async function processFile(fileName: string): Promise<void> {
   console.log(
     `ok  ${notebook.bookTitle} -> ${outputPath} (${notebook.highlights.length} highlights, ${chapters.size} chapters)`,
   );
+
+  const blocks = buildNotionBlocks(notebook.highlights);
+  const pageId = await uploadHighlightsToNotion(
+    notionClient,
+    notionDatabaseId,
+    notebook.bookTitle,
+    blocks,
+  );
+  console.log(`ok  ${notebook.bookTitle} -> Notion page ${pageId}`);
 }
 
 async function main(): Promise<void> {
   console.log('kindle-to-notion CLI');
+
+  if (!NOTION_API_KEY || !NOTION_PARENT_DATABASE_ID) {
+    console.error('missing NOTION_API_KEY or NOTION_PARENT_DATABASE_ID in environment');
+    process.exitCode = 1;
+
+    return;
+  }
+  const notionClient = createNotionClient(NOTION_API_KEY);
 
   const entries = await readdir(INPUT_DIR);
   const pdfFiles = entries.filter((entry) => entry.toLocaleLowerCase().endsWith('.pdf'));
@@ -47,7 +76,7 @@ async function main(): Promise<void> {
 
   for (const fileName of pdfFiles) {
     try {
-      await processFile(fileName);
+      await processFile(fileName, notionClient, NOTION_PARENT_DATABASE_ID);
     } catch (error) {
       failures++;
       const message = error instanceof Error ? error.message : String(error);
