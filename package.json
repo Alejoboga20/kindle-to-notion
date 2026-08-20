@@ -29,6 +29,8 @@
     "vitest": "^4.1.10"
   },
   "dependencies": {
+    "@notionhq/client": "^5.25.2",
+    "dotenv": "^17.4.2",
     "unpdf": "^1.8.1",
     "zod": "^4.4.3"
   }

@@ -10,3 +10,5 @@ input/*
 
 examples/
 !examples/.gitkeep
+
+.env
