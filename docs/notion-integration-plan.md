@@ -67,7 +67,7 @@ Note: Notion API caps 100 blocks per single page-creation/append call. Kindle no
 Orchestrates the upload for one book:
 
 - `uploadHighlightsToNotion(client: Client, parentDatabaseId: string, bookTitle: string, author: string, blocks: BlockObjectRequest[]): Promise<string>` — creates page under parent database with title property set to `bookTitle`, appends blocks in ≤100 chunks, returns created page URL/ID.
-- Duplicate handling: before creating, query parent database for existing page with matching title property (Notion API `databases.query` with filter). If found, either skip with warning log or archive+recreate — decide behavior explicitly (recommend: skip + log warning, so re-running CLI on same `input/` doesn't spam duplicate Notion pages).
+- Duplicate handling: before creating, query parent database's data source for existing page with matching title property (`dataSources.query` with filter — API `2025-09-03` moved querying off `databases.query` onto the data-source resource). If found, update in place: delete all top-level blocks under that page (`blocks.children.list` paginated, then `blocks.delete` each), then append the freshly built blocks. Keeps the same page ID/URL across reruns (no broken links), at the cost of one delete call per existing block.
 
 ## Wiring into `cli.ts`
 

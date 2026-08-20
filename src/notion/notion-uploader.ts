@@ -41,11 +41,37 @@ async function findExistingPage(
   return results.results[0]?.id;
 }
 
+/** Deletes every top-level block under a page, so it can be repopulated from scratch. */
+async function clearPageContent(client: Client, pageId: string): Promise<void> {
+  let cursor: string | undefined;
+  const blockIds: string[] = [];
+  do {
+    const page = await client.blocks.children.list({ block_id: pageId, start_cursor: cursor });
+    blockIds.push(...page.results.map((block) => block.id));
+    cursor = page.has_more ? (page.next_cursor ?? undefined) : undefined;
+  } while (cursor);
+
+  for (const blockId of blockIds) {
+    await client.blocks.delete({ block_id: blockId });
+  }
+}
+
+async function appendBlocksInChunks(
+  client: Client,
+  pageId: string,
+  blocks: BlockObjectRequest[],
+): Promise<void> {
+  for (const chunk of chunkBlocks(blocks, NOTION_MAX_BLOCKS_PER_REQUEST)) {
+    await client.blocks.children.append({ block_id: pageId, children: chunk });
+  }
+}
+
 /**
  * Creates a Notion page for one book under the given database and appends
- * its highlight blocks. Skips the upload (with a warning) if a page with
- * the same title already exists in the database, so re-running the CLI on
- * the same `input/` doesn't create duplicate pages.
+ * its highlight blocks. If a page with the same title already exists in the
+ * database, its content is cleared and replaced in place (same page, same
+ * URL/ID), so re-running the CLI on the same `input/` updates rather than
+ * duplicates.
  */
 export async function uploadHighlightsToNotion(
   client: Client,
@@ -57,7 +83,9 @@ export async function uploadHighlightsToNotion(
 
   const existingPageId = await findExistingPage(client, dataSourceId, titleProperty, bookTitle);
   if (existingPageId) {
-    console.warn(`skip Notion upload for "${bookTitle}": page already exists (${existingPageId})`);
+    console.log(`updating existing Notion page for "${bookTitle}" (${existingPageId})`);
+    await clearPageContent(client, existingPageId);
+    await appendBlocksInChunks(client, existingPageId, blocks);
 
     return existingPageId;
   }

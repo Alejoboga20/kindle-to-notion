@@ -41,7 +41,7 @@ Future iterations may parse Kindle's `My Clippings.txt` directly.
    NOTION_PARENT_DATABASE_ID=<your database id>
    ```
 
-Re-running the CLI on the same `input/` skips books that already have a page in the database (matched by title), so it won't create duplicates.
+Re-running the CLI on the same `input/` updates the existing Notion page in place (matched by title) instead of creating a duplicate.
 
 ## Requirements
 
