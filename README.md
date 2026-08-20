@@ -1,5 +1,7 @@
 # kindle-to-notion
 
+[![CI](https://github.com/Alejoboga20/kindle-to-notion/actions/workflows/ci.yml/badge.svg)](https://github.com/Alejoboga20/kindle-to-notion/actions/workflows/ci.yml)
+
 Get Kindle highlights and notes into Notion with minimal friction.
 
 ## Problem
@@ -93,6 +95,8 @@ Every `.pdf` in `input/` is processed; a malformed file is skipped with an error
 | `npm run format:check`  | Check formatting without writing changes                    |
 | `npm test`               | Run the Vitest test suite                                    |
 
+CI runs `format:check`, `lint`, `build`, and `test` on every push (`.github/workflows/ci.yml`).
+
 ## Project structure
 
 ```
@@ -117,4 +121,4 @@ kindle-to-notion/
 
 ## Status
 
-PDF → Markdown → Notion pipeline is implemented and working end-to-end. Not yet built: `My Clippings.txt` input, two-way sync, updating an already-uploaded page's content on re-run.
+PDF → Markdown → Notion pipeline is implemented and working end-to-end, including updating an already-uploaded page's content on re-run (matched by title). Not yet built: `My Clippings.txt` input, two-way sync.
